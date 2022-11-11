@@ -63,6 +63,11 @@ impl event::EventHandler<ggez::GameError> for MainState {
             self.time += self.playback_speed as u64 * ctx.time.delta().as_millis() as u64;
         }
 
+        if self.time > self.events.last().unwrap().tick {
+            self.time = self.events.last().unwrap().tick;
+            self.playing = false;
+        }
+
         Ok(())
     }
 
@@ -76,25 +81,25 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let zoom_factor = f32::powf(2.0, self.zoom);
         let scale_factor = ctx.gfx.window().scale_factor();
 
-        let mut i = 0;
-        while i < events.len() && events[i].tick < self.time {
-            let event = &events[i];
+        for event in events {
+            if event.tick > self.time {
+                break;
+            }
+
             instance_array.push(graphics::DrawParam::new().dest(Vec2::new(
                 event.x * scale_factor as f32 * zoom_factor + self.pan.x,
                 event.y * scale_factor as f32 * zoom_factor + self.pan.y,
             )));
-
-            i += 1
         }
 
         canvas.draw(&instance_array, Vec2::new(800.0, 800.0));
 
         let fps_display = graphics::Text::new(format!(
-            "FPS: {:.0} Time: {}:{} Playback Speed: {}x",
+            "FPS: {:.0} Time: {:02}:{:02} Playback Speed: {}x",
             ctx.time.fps(),
-            self.time / 60000,
-            self.time / 1000 % 60,
-            self.playback_speed,
+            self.time / (60 * 60 * 60),
+            self.time / (60 * 60) % 60,
+            if self.playing { self.playback_speed } else { 0 },
         ));
         canvas.draw(
             &fps_display,
