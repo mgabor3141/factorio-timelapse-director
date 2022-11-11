@@ -2,7 +2,7 @@ use ggez::{
     event,
     glam::*,
     graphics::{self, Color},
-    Context, GameResult, winit::{dpi::LogicalSize}, mint::Point2
+    Context, GameResult, winit::{dpi::LogicalSize}, mint::Point2, input
 };
 use ggez::conf::{WindowMode, WindowSetup};
 use std::{io};
@@ -13,6 +13,7 @@ struct MainState {
     mouse_down: bool,
     pan: Point2<f32>,
     zoom: f32,
+    playing: bool,
     time: u64,
     events: Vec<Event>
 }
@@ -44,6 +45,7 @@ impl MainState {
             mouse_down: false,
             pan: Point2{x: 0.0, y: 0.0},
             zoom: 1.0,
+            playing: false,
             events,
             time: 0
         })
@@ -52,7 +54,9 @@ impl MainState {
 
 impl event::EventHandler<ggez::GameError> for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
-        self.time += 600;
+        if self.playing {
+            self.time += 600;
+        }
         Ok(())
     }
 
@@ -142,6 +146,21 @@ impl event::EventHandler<ggez::GameError> for MainState {
             self.pan = Point2{x: self.pan.x + dx, y: self.pan.y + dy};
         }
         
+        Ok(())
+    }
+
+    fn key_down_event(
+        &mut self,
+        ctx: &mut Context,
+        input: input::keyboard::KeyInput,
+        _repeated: bool
+    ) -> GameResult {
+        match input.keycode {
+            Some(input::keyboard::KeyCode::Space) => self.playing = !self.playing,
+            Some(input::keyboard::KeyCode::Escape) => ctx.request_quit(),
+            _ => (),
+        }
+
         Ok(())
     }
 }
