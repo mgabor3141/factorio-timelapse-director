@@ -17,6 +17,7 @@ struct MainState {
     pan: Point2<f32>,
     zoom: f32,
     playing: bool,
+    playback_speed: u32,
     time: u64,
     events: Vec<Event>,
 }
@@ -49,6 +50,7 @@ impl MainState {
             pan: Point2 { x: 0.0, y: 0.0 },
             zoom: 1.0,
             playing: true,
+            playback_speed: 16,
             events,
             time: 0,
         })
@@ -56,10 +58,11 @@ impl MainState {
 }
 
 impl event::EventHandler<ggez::GameError> for MainState {
-    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+    fn update(&mut self, ctx: &mut Context) -> GameResult {
         if self.playing {
-            self.time += 600;
+            self.time += self.playback_speed as u64 * ctx.time.delta().as_millis() as u64;
         }
+
         Ok(())
     }
 
@@ -86,8 +89,13 @@ impl event::EventHandler<ggez::GameError> for MainState {
 
         canvas.draw(&instance_array, Vec2::new(800.0, 800.0));
 
-        let fps_display =
-            graphics::Text::new(format!("FPS: {:.0} Time: {:.0}", ctx.time.fps(), self.time));
+        let fps_display = graphics::Text::new(format!(
+            "FPS: {:.0} Time: {}:{} Playback Speed: {}x",
+            ctx.time.fps(),
+            self.time / 60000,
+            self.time / 1000 % 60,
+            self.playback_speed,
+        ));
         canvas.draw(
             &fps_display,
             graphics::DrawParam::from([10.0, 10.0]).color(Color::WHITE),
@@ -159,6 +167,8 @@ impl event::EventHandler<ggez::GameError> for MainState {
         match input.keycode {
             Some(input::keyboard::KeyCode::Space) => self.playing = !self.playing,
             Some(input::keyboard::KeyCode::R) => self.time = 0,
+            Some(input::keyboard::KeyCode::LBracket) => self.playback_speed /= 2,
+            Some(input::keyboard::KeyCode::RBracket) => self.playback_speed *= 2,
             Some(input::keyboard::KeyCode::Escape) => ctx.request_quit(),
             _ => (),
         }
