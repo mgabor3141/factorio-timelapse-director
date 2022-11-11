@@ -1,6 +1,7 @@
 mod camera;
 mod constants;
 mod event;
+mod state;
 
 use csv;
 use ggez::conf::{WindowMode, WindowSetup};
@@ -14,34 +15,11 @@ use ggez::{
     winit::dpi::LogicalSize,
     Context, GameResult,
 };
+use state::{MainState, WhatToDraw};
 use std::io;
 
 use camera::*;
 use event::Event;
-
-struct WhatToDraw {
-    camera_rectangles: bool,
-}
-
-impl Default for WhatToDraw {
-    fn default() -> WhatToDraw {
-        WhatToDraw {
-            camera_rectangles: false,
-        }
-    }
-}
-
-struct MainState {
-    mouse_down: bool,
-    pan: Point2<f32>,
-    zoom: f32,
-    playing: bool,
-    playback_speed: u32,
-    time: u64,
-    events: Vec<Event>,
-    cameras: Vec<Camera>,
-    what_to_draw: WhatToDraw,
-}
 
 impl MainState {
     fn new(_ctx: &mut Context) -> GameResult<MainState> {
