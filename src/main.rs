@@ -19,6 +19,18 @@ use std::io;
 use camera::*;
 use event::Event;
 
+struct WhatToDraw {
+    camera_rectangles: bool,
+}
+
+impl Default for WhatToDraw {
+    fn default() -> WhatToDraw {
+        WhatToDraw {
+            camera_rectangles: false,
+        }
+    }
+}
+
 struct MainState {
     mouse_down: bool,
     pan: Point2<f32>,
@@ -28,6 +40,7 @@ struct MainState {
     time: u64,
     events: Vec<Event>,
     cameras: Vec<Camera>,
+    what_to_draw: WhatToDraw,
 }
 
 impl MainState {
@@ -48,8 +61,6 @@ impl MainState {
 
         let cameras = calculate_cameras(&events);
 
-        // print!("Cameras: {:?}", cameras);
-
         Ok(MainState {
             mouse_down: false,
             pan: Point2 { x: 0.0, y: 0.0 },
@@ -59,6 +70,7 @@ impl MainState {
             time: 0,
             events,
             cameras,
+            what_to_draw: WhatToDraw::default(),
         })
     }
 }
@@ -102,29 +114,31 @@ impl EventHandler<ggez::GameError> for MainState {
         canvas.draw(&instance_array, Vec2::new(800.0, 800.0));
 
         // Draw camera rectangles
-        for cam in &self.cameras {
-            let rect_option = camera_to_rect(cam, self.time);
-            if rect_option.is_none() {
-                continue;
-            }
+        if (self.what_to_draw.camera_rectangles) {
+            for cam in &self.cameras {
+                let rect_option = camera_to_rect(cam, self.time);
+                if rect_option.is_none() {
+                    continue;
+                }
 
-            let rect = graphics::Rect {
-                x: rect_option.unwrap().x * zoom_factor + self.pan.x,
-                y: rect_option.unwrap().y * zoom_factor + self.pan.y,
-                w: rect_option.unwrap().w * zoom_factor,
-                h: rect_option.unwrap().h * zoom_factor,
-            };
+                let rect = graphics::Rect {
+                    x: rect_option.unwrap().x * zoom_factor + self.pan.x,
+                    y: rect_option.unwrap().y * zoom_factor + self.pan.y,
+                    w: rect_option.unwrap().w * zoom_factor,
+                    h: rect_option.unwrap().h * zoom_factor,
+                };
 
-            canvas.draw(
-                &graphics::Mesh::new_rectangle(
-                    ctx,
-                    DrawMode::Stroke(StrokeOptions::default()),
-                    rect,
-                    graphics::Color::from([0.4, 0.3, 0.2, 1.0]),
+                canvas.draw(
+                    &graphics::Mesh::new_rectangle(
+                        ctx,
+                        DrawMode::Stroke(StrokeOptions::default()),
+                        rect,
+                        graphics::Color::from([0.4, 0.3, 0.2, 1.0]),
+                    )
+                    .unwrap(),
+                    Vec2::new(800.0, 800.0),
                 )
-                .unwrap(),
-                Vec2::new(800.0, 800.0),
-            )
+            }
         }
 
         // Draw text
@@ -208,6 +222,9 @@ impl EventHandler<ggez::GameError> for MainState {
             Some(input::keyboard::KeyCode::R) => self.time = 0,
             Some(input::keyboard::KeyCode::LBracket) => self.playback_speed /= 2,
             Some(input::keyboard::KeyCode::RBracket) => self.playback_speed *= 2,
+            Some(input::keyboard::KeyCode::C) => {
+                self.what_to_draw.camera_rectangles = !self.what_to_draw.camera_rectangles
+            }
             Some(input::keyboard::KeyCode::Escape) => ctx.request_quit(),
             _ => (),
         }
