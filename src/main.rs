@@ -48,7 +48,7 @@ impl MainState {
             mouse_down: false,
             pan: Point2 { x: 0.0, y: 0.0 },
             zoom: 1.0,
-            playing: false,
+            playing: true,
             events,
             time: 0,
         })
@@ -158,6 +158,7 @@ impl event::EventHandler<ggez::GameError> for MainState {
     ) -> GameResult {
         match input.keycode {
             Some(input::keyboard::KeyCode::Space) => self.playing = !self.playing,
+            Some(input::keyboard::KeyCode::R) => self.time = 0,
             Some(input::keyboard::KeyCode::Escape) => ctx.request_quit(),
             _ => (),
         }
