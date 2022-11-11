@@ -1,7 +1,7 @@
 use ggez::{
     event,
     glam::*,
-    graphics::{self},
+    graphics::{self, Color},
     Context, GameResult
 };
 use ggez::conf::{WindowMode, WindowSetup};
@@ -10,7 +10,8 @@ use csv;
 use serde::Deserialize;
 
 struct MainState {
-    instance_array: graphics::InstanceArray,
+    time: u64,
+    events: Vec<Event>
 }
 
 #[derive(Debug, Deserialize)]
@@ -22,10 +23,7 @@ struct Event {
 
 impl MainState {
     fn new(ctx: &mut Context) -> GameResult<MainState> {
-        let mut instance_array = graphics::InstanceArray::new(
-            ctx,
-            None
-        );
+        let mut events = Vec::new();
 
         let mut rdr = csv::Reader::from_reader(io::stdin());
         for result in rdr.deserialize() {
@@ -36,17 +34,16 @@ impl MainState {
                 Err(_) => panic!("Error loading CSV")
             };
 
-            instance_array.push(graphics::DrawParam::new()
-                .dest(Vec2::new(event.x, event.y))
-            );
+            events.push(event)
         }    
 
-        Ok(MainState { instance_array })
+        Ok(MainState { events, time: 0 })
     }
 }
 
 impl event::EventHandler<ggez::GameError> for MainState {
     fn update(&mut self, _ctx: &mut Context) -> GameResult {
+        self.time += 600;
         Ok(())
     }
 
@@ -54,7 +51,33 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let mut canvas =
             graphics::Canvas::from_frame(ctx, graphics::Color::from([0.1, 0.2, 0.3, 1.0]));
 
-        canvas.draw(&self.instance_array, Vec2::new(800.0, 800.0));
+        
+        let mut instance_array = graphics::InstanceArray::new(
+            ctx,
+            None
+        );
+
+        let events = &self.events;
+
+        let mut i = 0;
+
+        while i < events.len() && events[i].tick < self.time  {
+            let event = &events[i];
+
+            instance_array.push(graphics::DrawParam::new()
+                .dest(Vec2::new(event.x, event.y))
+            );
+
+            i += 1
+        }
+
+        canvas.draw(&instance_array, Vec2::new(800.0, 800.0));
+
+        let fps_display = graphics::Text::new(format!("FPS: {:.0}", ctx.time.fps()));
+        canvas.draw(
+            &fps_display,
+            graphics::DrawParam::from([200.0, 0.0]).color(Color::WHITE),
+        );
 
         canvas.finish(ctx)?;
 
@@ -67,7 +90,7 @@ pub fn main() -> GameResult {
         .window_setup(WindowSetup::default().title("Factorio Replay Events Points Scatter"))
         .window_mode(
             WindowMode::default()
-                .dimensions(1280.0, 720.0)
+                .dimensions(1500.0, 1500.0)
                 .resizable(true),
         );
     let (mut ctx, event_loop) = cb.build()?;
