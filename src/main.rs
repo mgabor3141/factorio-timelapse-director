@@ -114,7 +114,7 @@ impl EventHandler<ggez::GameError> for MainState {
         canvas.draw(&instance_array, Vec2::new(800.0, 800.0));
 
         // Draw camera rectangles
-        if (self.what_to_draw.camera_rectangles) {
+        if self.what_to_draw.camera_rectangles {
             for cam in &self.cameras {
                 let rect_option = camera_to_rect(cam, self.time);
                 if rect_option.is_none() {
