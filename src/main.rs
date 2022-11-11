@@ -1,7 +1,12 @@
+mod camera;
+mod constants;
+mod event;
+
 use csv;
 use ggez::conf::{WindowMode, WindowSetup};
+use ggez::graphics::{DrawMode, StrokeOptions};
 use ggez::{
-    event,
+    event::{run, EventHandler, MouseButton},
     glam::*,
     graphics::{self, Color},
     input,
@@ -9,8 +14,10 @@ use ggez::{
     winit::dpi::LogicalSize,
     Context, GameResult,
 };
-use serde::Deserialize;
 use std::io;
+
+use camera::*;
+use event::Event;
 
 struct MainState {
     mouse_down: bool,
@@ -20,13 +27,7 @@ struct MainState {
     playback_speed: u32,
     time: u64,
     events: Vec<Event>,
-}
-
-#[derive(Debug, Deserialize)]
-struct Event {
-    tick: u64,
-    x: f32,
-    y: f32,
+    cameras: Vec<Camera>,
 }
 
 impl MainState {
@@ -45,19 +46,24 @@ impl MainState {
             events.push(event)
         }
 
+        let cameras = calculate_cameras(&events);
+
+        // print!("Cameras: {:?}", cameras);
+
         Ok(MainState {
             mouse_down: false,
             pan: Point2 { x: 0.0, y: 0.0 },
             zoom: 1.0,
             playing: true,
             playback_speed: 16,
-            events,
             time: 0,
+            events,
+            cameras,
         })
     }
 }
 
-impl event::EventHandler<ggez::GameError> for MainState {
+impl EventHandler<ggez::GameError> for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         if self.playing {
             self.time += self.playback_speed as u64 * ctx.time.delta().as_millis() as u64;
@@ -75,11 +81,12 @@ impl event::EventHandler<ggez::GameError> for MainState {
         let mut canvas =
             graphics::Canvas::from_frame(ctx, graphics::Color::from([0.1, 0.2, 0.3, 1.0]));
 
+        // Draw point cloud
         let mut instance_array = graphics::InstanceArray::new(ctx, None);
 
         let events = &self.events;
-        let zoom_factor = f32::powf(2.0, self.zoom);
         let scale_factor = ctx.gfx.window().scale_factor();
+        let zoom_factor = f32::powf(2.0, self.zoom) * scale_factor as f32;
 
         for event in events {
             if event.tick > self.time {
@@ -87,13 +94,40 @@ impl event::EventHandler<ggez::GameError> for MainState {
             }
 
             instance_array.push(graphics::DrawParam::new().dest(Vec2::new(
-                event.x * scale_factor as f32 * zoom_factor + self.pan.x,
-                event.y * scale_factor as f32 * zoom_factor + self.pan.y,
+                event.x * zoom_factor + self.pan.x,
+                event.y * zoom_factor + self.pan.y,
             )));
         }
 
         canvas.draw(&instance_array, Vec2::new(800.0, 800.0));
 
+        // Draw camera rectangles
+        for cam in &self.cameras {
+            let rect_option = camera_to_rect(cam, self.time);
+            if rect_option.is_none() {
+                continue;
+            }
+
+            let rect = graphics::Rect {
+                x: rect_option.unwrap().x * zoom_factor + self.pan.x,
+                y: rect_option.unwrap().y * zoom_factor + self.pan.y,
+                w: rect_option.unwrap().w * zoom_factor,
+                h: rect_option.unwrap().h * zoom_factor,
+            };
+
+            canvas.draw(
+                &graphics::Mesh::new_rectangle(
+                    ctx,
+                    DrawMode::Stroke(StrokeOptions::default()),
+                    rect,
+                    graphics::Color::from([0.4, 0.3, 0.2, 1.0]),
+                )
+                .unwrap(),
+                Vec2::new(800.0, 800.0),
+            )
+        }
+
+        // Draw text
         let fps_display = graphics::Text::new(format!(
             "FPS: {:.0} Time: {:02}:{:02} Playback Speed: {}x",
             ctx.time.fps(),
@@ -120,11 +154,11 @@ impl event::EventHandler<ggez::GameError> for MainState {
     fn mouse_button_down_event(
         &mut self,
         _ctx: &mut Context,
-        button: event::MouseButton,
+        button: MouseButton,
         _x: f32,
         _y: f32,
     ) -> GameResult {
-        if button == event::MouseButton::Left {
+        if button == MouseButton::Left {
             self.mouse_down = true;
         }
 
@@ -134,11 +168,11 @@ impl event::EventHandler<ggez::GameError> for MainState {
     fn mouse_button_up_event(
         &mut self,
         _ctx: &mut Context,
-        button: event::MouseButton,
+        button: MouseButton,
         _x: f32,
         _y: f32,
     ) -> GameResult {
-        if button == event::MouseButton::Left {
+        if button == MouseButton::Left {
             self.mouse_down = false;
         }
 
@@ -192,5 +226,5 @@ pub fn main() -> GameResult {
         });
     let (mut ctx, event_loop) = cb.build()?;
     let state = MainState::new(&mut ctx)?;
-    event::run(ctx, event_loop, state)
+    run(ctx, event_loop, state)
 }
