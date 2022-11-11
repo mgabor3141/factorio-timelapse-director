@@ -67,17 +67,16 @@ impl event::EventHandler<ggez::GameError> for MainState {
         );
 
         let events = &self.events;
+        let zoom_factor = f32::powf(2.0, self.zoom);
+        let scale_factor = ctx.gfx.window().scale_factor();
 
         let mut i = 0;
-
         while i < events.len() && events[i].tick < self.time  {
             let event = &events[i];
-
-            let zoom_factor = f32::powf(2.0, self.zoom);
             instance_array.push(graphics::DrawParam::new()
                 .dest(Vec2::new(
-                    event.x * ctx.gfx.window().scale_factor() as f32 * zoom_factor + self.pan.x,
-                    event.y * ctx.gfx.window().scale_factor() as f32 * zoom_factor + self.pan.y
+                    event.x * scale_factor as f32 * zoom_factor + self.pan.x,
+                    event.y * scale_factor as f32 * zoom_factor + self.pan.y
                 ))
             );
 
