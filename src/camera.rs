@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::time::Instant;
 
 use geo::algorithm::euclidean_distance::EuclideanDistance;
@@ -50,15 +51,40 @@ pub struct CameraMove {
 #[derive(Debug)]
 pub struct Camera {
     moves: Vec<CameraMove>,
+    position_cache: HashMap<u64, CameraPos>,
 }
 
 impl Camera {
     pub fn new() -> Self {
-        Self { moves: Vec::new() }
+        Self {
+            moves: Vec::new(),
+            position_cache: HashMap::new(),
+        }
     }
 
     pub fn add_move(&mut self, m: CameraMove) -> () {
         self.moves.push(m)
+    }
+
+    pub fn position(&self, tick: u64) -> Option<&CameraPos> {
+        match self.position_cache.get(&tick) {
+            None => {
+                let mut pos = None;
+
+                for camera_move in &self.moves {
+                    if camera_move.on_tick == tick {
+                        pos = Some(&camera_move.to);
+                        break;
+                    } else if camera_move.on_tick > tick {
+                        break;
+                    }
+                    pos = Some(&camera_move.to);
+                }
+
+                pos
+            }
+            Some(p) => Some(p),
+        }
     }
 }
 
@@ -100,7 +126,7 @@ pub fn calculate_cameras(events: &Vec<Event>) -> Vec<Camera> {
 }
 
 pub fn camera_to_rect(camera: &Camera, tick: u64) -> Option<Rect> {
-    let pos = camera_position_on_tick(camera, tick);
+    let pos = camera.position(tick);
 
     match pos {
         None => None,
@@ -109,26 +135,10 @@ pub fn camera_to_rect(camera: &Camera, tick: u64) -> Option<Rect> {
 }
 
 fn camera_event_distance(camera: &Camera, event: &Event) -> f64 {
-    let pos = camera_position_on_tick(camera, event.tick);
+    let pos = camera.position(event.tick);
 
     match pos {
         None => f64::INFINITY,
         Some(pos) => pos.polygon.euclidean_distance(&event.geo_point),
     }
-}
-
-fn camera_position_on_tick(camera: &Camera, tick: u64) -> Option<&CameraPos> {
-    let mut pos = None;
-
-    for camera_move in &camera.moves {
-        if camera_move.on_tick == tick {
-            pos = Some(&camera_move.to);
-            break;
-        } else if camera_move.on_tick > tick {
-            break;
-        }
-        pos = Some(&camera_move.to);
-    }
-
-    pos
 }
