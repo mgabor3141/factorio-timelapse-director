@@ -9,3 +9,5 @@ edition = "2021"
 ggez = "0.8.1"
 csv = "1.1"
 serde = { version = "1", features = ["derive"] }
+geo = "0.23.0"
+geo-types = "0.7.7"

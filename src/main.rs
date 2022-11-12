@@ -1,15 +1,15 @@
 mod camera;
 mod constants;
+mod conversions;
 mod event;
 mod state;
 
 use csv;
-use ggez::conf::{WindowMode, WindowSetup};
-use ggez::graphics::{DrawMode, StrokeOptions};
 use ggez::{
+    conf::{WindowMode, WindowSetup},
     event::{run, EventHandler, MouseButton},
     glam::*,
-    graphics::{self, Color},
+    graphics::{self, Color, DrawMode, StrokeOptions},
     input,
     mint::Point2,
     winit::dpi::LogicalSize,

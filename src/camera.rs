@@ -1,6 +1,9 @@
+use geo::algorithm::euclidean_distance::EuclideanDistance;
+use geo::Point;
 use ggez::{graphics::Rect, mint::Point2};
 
-use crate::constants::{RESOLUTION, TILE_SIZE_PX};
+use crate::constants::*;
+use crate::conversions::rect_to_geo;
 use crate::event::Event;
 
 #[derive(Debug)]
@@ -17,33 +20,51 @@ pub struct CameraMove {
 
 #[derive(Debug)]
 pub struct Camera {
-    pub moves: Vec<CameraMove>,
+    moves: Vec<CameraMove>,
+}
+
+impl Camera {
+    pub fn new() -> Self {
+        Self { moves: Vec::new() }
+    }
+
+    pub fn add_move(&mut self, m: CameraMove) -> () {
+        self.moves.push(m)
+    }
 }
 
 pub fn calculate_cameras(events: &Vec<Event>) -> Vec<Camera> {
     let mut cameras = Vec::new();
 
     for event in events {
-        if cameras
-            .iter()
-            .find(|camera| can_camera_see_event(camera, event))
-            .is_none()
-        {
-            let mut moves = Vec::new();
-            moves.push(CameraMove {
-                to: CameraPos {
-                    // TODO figure out how to use .into() here
-                    pos: Point2 {
-                        x: event.x,
-                        y: event.y,
-                    },
-                    zoom: 1.0,
-                },
-                on_tick: event.tick,
-            });
+        let closest_camera = cameras.iter_mut().min_by(|camera, other| {
+            camera_event_distance(camera, event).total_cmp(&camera_event_distance(other, event))
+        });
 
-            cameras.push(Camera { moves });
-        }
+        let camera = match closest_camera {
+            None => {
+                let newcam = Camera::new();
+                cameras.push(newcam);
+                cameras.last_mut().unwrap()
+            }
+            Some(camera) => {
+                if camera_event_distance(camera, event) > CAMERA_FOLLOW_THRESHOLD {
+                    let newcam = Camera::new();
+                    cameras.push(newcam);
+                    cameras.last_mut().unwrap()
+                } else {
+                    camera
+                }
+            }
+        };
+
+        camera.add_move(CameraMove {
+            to: CameraPos {
+                pos: event.into(),
+                zoom: CAMERA_TARGET_MAXIMUM_ZOOM,
+            },
+            on_tick: event.tick,
+        });
     }
 
     cameras
@@ -71,16 +92,19 @@ fn camera_pos_to_rect(camera: &CameraPos) -> Rect {
     }
 }
 
-//
-
-fn can_camera_see_event(camera: &Camera, event: &Event) -> bool {
+fn camera_event_distance(camera: &Camera, event: &Event) -> f64 {
     let pos = camera_position_on_tick(camera, event.tick);
 
     if pos.is_none() {
-        return false;
+        return f64::INFINITY;
     }
 
-    camera_pos_to_rect(&pos.unwrap()).contains(event)
+    let camera_rect = camera_pos_to_rect(&pos.unwrap());
+    let camera_geo = rect_to_geo(&camera_rect);
+
+    camera_geo
+        .to_polygon()
+        .euclidean_distance(&Point::new(event.x as f64, event.y as f64))
 }
 
 fn camera_position_on_tick(camera: &Camera, tick: u64) -> Option<&CameraPos> {
