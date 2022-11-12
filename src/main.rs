@@ -1,6 +1,5 @@
 mod camera;
 mod constants;
-mod conversions;
 mod event;
 mod state;
 
@@ -18,30 +17,33 @@ use ggez::{
 use state::{MainState, WhatToDraw};
 use std::io;
 
-use camera::*;
-use event::Event;
+use crate::camera::*;
+use crate::event::*;
 
 impl MainState {
     fn new(_ctx: &mut Context) -> GameResult<MainState> {
+        println!("Reading events from stdin...");
         let mut events = Vec::new();
 
         let mut rdr = csv::Reader::from_reader(io::stdin());
         for result in rdr.deserialize() {
             // The iterator yields Result<StringRecord, Error>, so we check the
             // error here.
-            let event: Event = match result {
+            let raw_event: RawEvent = match result {
                 Ok(r) => r,
                 Err(_) => panic!("Error loading CSV"),
             };
 
-            events.push(event)
+            events.push(Event::new(raw_event))
         }
+
+        println!("Done! Read {} events", events.len());
 
         let cameras = calculate_cameras(&events);
 
         Ok(MainState {
             mouse_down: false,
-            pan: Point2 { x: 0.0, y: 0.0 },
+            pan: Point2 { x: 600., y: 600. },
             zoom: 1.0,
             playing: true,
             playback_speed: 16,
@@ -83,27 +85,25 @@ impl EventHandler<ggez::GameError> for MainState {
                 break;
             }
 
-            instance_array.push(graphics::DrawParam::new().dest(Vec2::new(
-                event.x * zoom_factor + self.pan.x,
-                event.y * zoom_factor + self.pan.y,
-            )));
+            instance_array.push(
+                graphics::DrawParam::new()
+                    .dest(Vec2::new(event.x * zoom_factor, event.y * zoom_factor)),
+            );
         }
 
-        canvas.draw(&instance_array, Vec2::new(800.0, 800.0));
+        canvas.draw(&instance_array, Vec2::new(self.pan.x, self.pan.y));
 
         // Draw camera rectangles
         if self.what_to_draw.camera_rectangles {
             for cam in &self.cameras {
-                let rect_option = camera_to_rect(cam, self.time);
-                if rect_option.is_none() {
-                    continue;
-                }
-
-                let rect = graphics::Rect {
-                    x: rect_option.unwrap().x * zoom_factor + self.pan.x,
-                    y: rect_option.unwrap().y * zoom_factor + self.pan.y,
-                    w: rect_option.unwrap().w * zoom_factor,
-                    h: rect_option.unwrap().h * zoom_factor,
+                let rect = match camera_to_rect(cam, self.time) {
+                    None => continue,
+                    Some(rect) => graphics::Rect {
+                        x: rect.x * zoom_factor,
+                        y: rect.y * zoom_factor,
+                        w: rect.w * zoom_factor,
+                        h: rect.h * zoom_factor,
+                    },
                 };
 
                 canvas.draw(
@@ -114,7 +114,7 @@ impl EventHandler<ggez::GameError> for MainState {
                         graphics::Color::from([0.4, 0.3, 0.2, 1.0]),
                     )
                     .unwrap(),
-                    Vec2::new(800.0, 800.0),
+                    Vec2::new(self.pan.x, self.pan.y),
                 )
             }
         }

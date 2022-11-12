@@ -1,17 +1,44 @@
 use std::time::Instant;
 
 use geo::algorithm::euclidean_distance::EuclideanDistance;
-use geo::Point;
+use geo_types;
 use ggez::{graphics::Rect, mint::Point2};
 
 use crate::constants::*;
-use crate::conversions::rect_to_geo;
 use crate::event::Event;
 
 #[derive(Debug)]
 pub struct CameraPos {
     pub pos: Point2<f32>,
     pub zoom: f32,
+
+    rect: Rect,
+    polygon: geo_types::Polygon,
+}
+
+impl CameraPos {
+    fn new(pos: Point2<f32>, zoom: f32) -> Self {
+        let w = RESOLUTION.x as f32 / TILE_SIZE_PX as f32;
+        let h = RESOLUTION.y as f32 / TILE_SIZE_PX as f32;
+
+        let rect = Rect {
+            x: pos.x - w / 2.0,
+            y: pos.y - h / 2.0,
+            w,
+            h,
+        };
+
+        Self {
+            pos,
+            zoom,
+            rect,
+            polygon: geo_types::Rect::new(
+                geo_types::coord! { x: rect.x as f64 , y: rect.y as f64  },
+                geo_types::coord! { x: (rect.x + w) as f64 , y: (rect.y + h) as f64 },
+            )
+            .to_polygon(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -62,10 +89,7 @@ pub fn calculate_cameras(events: &Vec<Event>) -> Vec<Camera> {
         };
 
         camera.add_move(CameraMove {
-            to: CameraPos {
-                pos: event.into(),
-                zoom: CAMERA_TARGET_MAXIMUM_ZOOM,
-            },
+            to: CameraPos::new(event.point, CAMERA_TARGET_MAXIMUM_ZOOM),
             on_tick: event.tick,
         });
     }
@@ -78,38 +102,19 @@ pub fn calculate_cameras(events: &Vec<Event>) -> Vec<Camera> {
 pub fn camera_to_rect(camera: &Camera, tick: u64) -> Option<Rect> {
     let pos = camera_position_on_tick(camera, tick);
 
-    if pos.is_none() {
-        return None;
-    }
-
-    Some(camera_pos_to_rect(&pos.unwrap()))
-}
-
-fn camera_pos_to_rect(camera: &CameraPos) -> Rect {
-    let w = RESOLUTION.x as f32 / TILE_SIZE_PX as f32;
-    let h = RESOLUTION.y as f32 / TILE_SIZE_PX as f32;
-
-    Rect {
-        x: camera.pos.x - w / 2.0,
-        y: camera.pos.y - h / 2.0,
-        w,
-        h,
+    match pos {
+        None => None,
+        Some(pos) => Some(pos.rect),
     }
 }
 
 fn camera_event_distance(camera: &Camera, event: &Event) -> f64 {
     let pos = camera_position_on_tick(camera, event.tick);
 
-    if pos.is_none() {
-        return f64::INFINITY;
+    match pos {
+        None => f64::INFINITY,
+        Some(pos) => pos.polygon.euclidean_distance(&event.geo_point),
     }
-
-    let camera_rect = camera_pos_to_rect(&pos.unwrap());
-    let camera_geo = rect_to_geo(&camera_rect);
-
-    camera_geo
-        .to_polygon()
-        .euclidean_distance(&Point::new(event.x as f64, event.y as f64))
 }
 
 fn camera_position_on_tick(camera: &Camera, tick: u64) -> Option<&CameraPos> {
