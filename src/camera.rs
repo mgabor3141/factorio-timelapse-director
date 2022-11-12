@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use geo::algorithm::euclidean_distance::EuclideanDistance;
 use geo::Point;
 use ggez::{graphics::Rect, mint::Point2};
@@ -34,6 +36,9 @@ impl Camera {
 }
 
 pub fn calculate_cameras(events: &Vec<Event>) -> Vec<Camera> {
+    let start_time = Instant::now();
+    println!("Calculating camera moves...");
+
     let mut cameras = Vec::new();
 
     for event in events {
@@ -43,14 +48,12 @@ pub fn calculate_cameras(events: &Vec<Event>) -> Vec<Camera> {
 
         let camera = match closest_camera {
             None => {
-                let newcam = Camera::new();
-                cameras.push(newcam);
+                cameras.push(Camera::new());
                 cameras.last_mut().unwrap()
             }
             Some(camera) => {
                 if camera_event_distance(camera, event) > CAMERA_FOLLOW_THRESHOLD {
-                    let newcam = Camera::new();
-                    cameras.push(newcam);
+                    cameras.push(Camera::new());
                     cameras.last_mut().unwrap()
                 } else {
                     camera
@@ -66,6 +69,8 @@ pub fn calculate_cameras(events: &Vec<Event>) -> Vec<Camera> {
             on_tick: event.tick,
         });
     }
+
+    println!("Done! Took {}s.", start_time.elapsed().as_secs());
 
     cameras
 }
