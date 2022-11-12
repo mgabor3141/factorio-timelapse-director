@@ -4,7 +4,7 @@ For creating cool Factorio timelapses
 
 ## Usage
 
-`cargo run < events-short.csv`
+`cargo run --release < events-short.csv`
 
 ### Controls:
 
