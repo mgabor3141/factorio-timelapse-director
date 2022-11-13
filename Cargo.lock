@@ -843,6 +843,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "factorio-timelapse-director"
+version = "0.1.0"
+dependencies = [
+ "csv",
+ "geo",
+ "geo-types",
+ "ggez",
+ "serde",
+]
+
+[[package]]
 name = "fastrand"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1977,17 +1988,6 @@ dependencies = [
  "crc32fast",
  "flate2",
  "miniz_oxide 0.6.2",
-]
-
-[[package]]
-name = "point-framer"
-version = "0.1.0"
-dependencies = [
- "csv",
- "geo",
- "geo-types",
- "ggez",
- "serde",
 ]
 
 [[package]]

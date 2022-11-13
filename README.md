@@ -1,6 +1,8 @@
-# Timelapse Camera Calculator
+# Factorio Timelapse Director
 
-For creating cool Factorio timelapses
+For creating cool Factorio timelapses.
+Supports large, non-contiguous bases and even multiplayer 
+bases to some extent. Work in progress.
 
 ## Usage
 

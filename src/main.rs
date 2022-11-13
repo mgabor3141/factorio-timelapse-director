@@ -4,6 +4,7 @@ mod event;
 mod state;
 
 use csv;
+use ggez::graphics::{PxScale, TextFragment};
 use ggez::{
     conf::{WindowMode, WindowSetup},
     event::{run, EventHandler, MouseButton},
@@ -16,6 +17,7 @@ use ggez::{
 };
 use state::{MainState, WhatToDraw};
 use std::io;
+use std::ops::Add;
 
 use crate::camera::*;
 use crate::event::*;
@@ -120,13 +122,19 @@ impl EventHandler<ggez::GameError> for MainState {
         }
 
         // Draw text
-        let fps_display = graphics::Text::new(format!(
-            "FPS: {:.0} Time: {:02}:{:02} Playback Speed: {}x",
-            ctx.time.fps(),
-            self.time / (60 * 60 * 60),
-            self.time / (60 * 60) % 60,
-            if self.playing { self.playback_speed } else { 0 },
-        ));
+        let fps_display = graphics::Text::new(
+            TextFragment::new(format!(
+                "Time: {:02}:{:02} Playback Speed: {}x\nFPS: {:.0}",
+                self.time / (60 * 60 * 60),
+                self.time / (60 * 60) % 60,
+                if self.playing { self.playback_speed } else { 0 },
+                ctx.time.fps(),
+            ))
+            .scale(PxScale {
+                x: 12. * scale_factor as f32,
+                y: 12. * scale_factor as f32,
+            }),
+        );
         canvas.draw(
             &fps_display,
             graphics::DrawParam::from([10.0, 10.0]).color(Color::WHITE),
@@ -203,6 +211,7 @@ impl EventHandler<ggez::GameError> for MainState {
             Some(input::keyboard::KeyCode::C) => {
                 self.what_to_draw.camera_rectangles = !self.what_to_draw.camera_rectangles
             }
+            Some(input::keyboard::KeyCode::Q) => ctx.request_quit(),
             Some(input::keyboard::KeyCode::Escape) => ctx.request_quit(),
             _ => (),
         }
@@ -212,8 +221,8 @@ impl EventHandler<ggez::GameError> for MainState {
 }
 
 pub fn main() -> GameResult {
-    let cb = ggez::ContextBuilder::new("points-framer", "ggez")
-        .window_setup(WindowSetup::default().title("Factorio Replay Events Points Scatter"))
+    let cb = ggez::ContextBuilder::new("factorio-timelapse-director", "mgabor")
+        .window_setup(WindowSetup::default().title("Factorio Timelapse Director"))
         .window_mode(WindowMode {
             logical_size: Some(LogicalSize::new(800.0, 600.0)),
             resizable: true,
