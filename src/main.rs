@@ -1,7 +1,4 @@
-mod camera;
-mod constants;
-mod event;
-mod state;
+use std::io;
 
 use csv;
 use ggez::graphics::{PxScale, TextFragment};
@@ -15,12 +12,15 @@ use ggez::{
     winit::dpi::LogicalSize,
     Context, GameResult,
 };
-use state::{MainState, WhatToDraw};
-use std::io;
-use std::ops::Add;
 
 use crate::camera::*;
 use crate::event::*;
+use crate::state::{MainState, WhatToDraw};
+
+mod camera;
+mod constants;
+mod event;
+mod state;
 
 impl MainState {
     fn new(_ctx: &mut Context) -> GameResult<MainState> {
@@ -145,12 +145,6 @@ impl EventHandler<ggez::GameError> for MainState {
         Ok(())
     }
 
-    fn mouse_wheel_event(&mut self, _ctx: &mut Context, _x: f32, y: f32) -> GameResult {
-        self.zoom += y / 20.0;
-
-        Ok(())
-    }
-
     fn mouse_button_down_event(
         &mut self,
         _ctx: &mut Context,
@@ -193,6 +187,12 @@ impl EventHandler<ggez::GameError> for MainState {
                 y: self.pan.y + dy,
             };
         }
+
+        Ok(())
+    }
+
+    fn mouse_wheel_event(&mut self, _ctx: &mut Context, _x: f32, y: f32) -> GameResult {
+        self.zoom += y / 20.0;
 
         Ok(())
     }
