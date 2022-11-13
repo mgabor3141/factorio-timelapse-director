@@ -96,13 +96,13 @@ impl EventHandler<ggez::GameError> for MainState {
         // Draw camera rectangles
         if self.what_to_draw.camera_rectangles {
             for cam in &self.cameras {
-                let rect = match camera_to_rect(cam, self.time) {
+                let rect = match cam.position(self.time) {
                     None => continue,
-                    Some(rect) => graphics::Rect {
-                        x: rect.x * zoom_factor,
-                        y: rect.y * zoom_factor,
-                        w: rect.w * zoom_factor,
-                        h: rect.h * zoom_factor,
+                    Some(pos) => graphics::Rect {
+                        x: pos.rect().x * zoom_factor,
+                        y: pos.rect().y * zoom_factor,
+                        w: pos.rect().w * zoom_factor,
+                        h: pos.rect().h * zoom_factor,
                     },
                 };
 

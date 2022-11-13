@@ -40,6 +40,10 @@ impl CameraPos {
             .to_polygon(),
         }
     }
+
+    pub fn rect(&self) -> Rect {
+        self.rect
+    }
 }
 
 #[derive(Debug)]
@@ -123,15 +127,6 @@ pub fn calculate_cameras(events: &Vec<Event>) -> Vec<Camera> {
     println!("Done! Took {}s.", start_time.elapsed().as_secs());
 
     cameras
-}
-
-pub fn camera_to_rect(camera: &Camera, tick: u64) -> Option<Rect> {
-    let pos = camera.position(tick);
-
-    match pos {
-        None => None,
-        Some(pos) => Some(pos.rect),
-    }
 }
 
 fn camera_event_distance(camera: &Camera, event: &Event) -> f64 {
