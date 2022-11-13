@@ -73,19 +73,13 @@ impl Camera {
     pub fn position(&self, tick: u64) -> Option<&CameraPos> {
         match self.position_cache.get(&tick) {
             None => {
-                let mut pos = None;
-
-                for camera_move in &self.moves {
-                    if camera_move.on_tick == tick {
-                        pos = Some(&camera_move.to);
-                        break;
-                    } else if camera_move.on_tick > tick {
-                        break;
+                for camera_move in self.moves.iter().rev() {
+                    if camera_move.on_tick <= tick {
+                        return Some(&camera_move.to);
                     }
-                    pos = Some(&camera_move.to);
                 }
 
-                pos
+                None
             }
             Some(p) => Some(p),
         }
